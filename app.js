@@ -7,7 +7,7 @@ const DEFAULT_CATEGORIES = ["الدراسة","الواجبات","المراجع�
 const PRIORITIES = {urgent:"عاجلة جداً",high:"عالية",medium:"متوسطة",low:"منخفضة"};
 const PRIORITY_ORDER = {urgent:0,high:1,medium:2,low:3};
 const quotes = ["الإنجاز يبدأ بقرار صغير.","لا تحتاج إلى إنجاز كل شيء اليوم؛ ابدأ بالأهم.","الاستمرارية تصنع ما لا تصنعه السرعة.","نظّم وقتك، واترك مساحة للأشياء الجميلة.","كل خطوة واضحة تقرّبك من هدفك."];
-let data = {tasks:[],notes:[],categories:[...DEFAULT_CATEGORIES]};
+let data = {tasks:[],notes:[],reminders:[],categories:[...DEFAULT_CATEGORIES]};
 let activeFilter = "all";
 let toastTimer;
 
@@ -31,6 +31,7 @@ function loadData() {
     if (parsed && typeof parsed === "object") {
       data.tasks = Array.isArray(parsed.tasks) ? parsed.tasks : [];
       data.notes = Array.isArray(parsed.notes) ? parsed.notes : [];
+      data.reminders = Array.isArray(parsed.reminders) ? parsed.reminders : [];
       data.categories = Array.isArray(parsed.categories) && parsed.categories.length ? parsed.categories : [...DEFAULT_CATEGORIES];
     }
   } catch (error) { console.error("LocalStorage read failed",error); toast("تعذر قراءة بعض البيانات المحفوظة."); }
@@ -54,6 +55,7 @@ function showPage(name) {
   window.scrollTo({top:0,behavior:"smooth"});
   if(name==="tasks") renderTasks();
   if(name==="notes") renderNotes();
+  if(name==="reminders") renderReminders();
 }
 function bindNavigation() {
   $$("[data-page]").forEach(el=>el.addEventListener("click",e=>{e.preventDefault();showPage(el.dataset.page);}));
@@ -171,6 +173,21 @@ function openNoteForm(note){resetNoteForm();if(note){$("#noteModalTitle").textCo
 function noteFormSubmit(e){e.preventDefault();const title=$("#noteTitle").value.trim(),content=$("#noteContent").value.trim();if(!title||!content){toast("أدخل عنوان الملاحظة ومحتواها.");return;}const id=$("#noteId").value,old=data.notes.find(n=>n.id===id);const note={id:id||uid(),title,content,color:$("#noteColor").value,pinned:$("#notePinned").checked,createdAt:old?old.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};if(old)data.notes=data.notes.map(n=>n.id===id?note:n);else data.notes.unshift(note);if(saveData()){closeModal("noteModal");renderNotes();toast(old?"تم تحديث الملاحظة.":"تم حفظ الملاحظة.");}}
 function renderNotes(){const q=$("#noteSearch").value.trim().toLocaleLowerCase("ar");const notes=[...data.notes].filter(n=>(n.title+" "+n.content).toLocaleLowerCase("ar").includes(q)).sort((a,b)=>Number(b.pinned)-Number(a.pinned)||new Date(b.updatedAt)-new Date(a.updatedAt));$("#notesList").innerHTML=notes.length?notes.map(n=>'<article class="note-card '+escapeHTML(n.color||"lilac")+(n.pinned?" pinned":"")+'">'+(n.pinned?'<span class="note-pin">◆</span>':'')+'<div class="note-actions"><button type="button" data-note-edit="'+escapeHTML(n.id)+'" aria-label="تعديل">✎</button><button type="button" data-note-delete="'+escapeHTML(n.id)+'" aria-label="حذف">×</button></div><h3>'+escapeHTML(n.title)+'</h3><p>'+escapeHTML(n.content)+'</p><span class="note-date">آخر تعديل: '+new Intl.DateTimeFormat("ar-EG",{day:"numeric",month:"short"}).format(new Date(n.updatedAt))+'</span></article>').join(""):'<div class="empty-inline">'+(q?"لا توجد ملاحظات مطابقة.":"لا توجد ملاحظات بعد. أنشئ أول ملاحظة للاحتفاظ بأفكارك.")+'</div>';}
 function handleNoteAction(e){const edit=e.target.closest("[data-note-edit]"),del=e.target.closest("[data-note-delete]");if(edit){const n=data.notes.find(x=>x.id===edit.dataset.noteEdit);if(n)openNoteForm(n);}if(del){const id=del.dataset.noteDelete;if(confirm("هل تريد حذف هذه الملاحظة؟")){data.notes=data.notes.filter(n=>n.id!==id);saveData();renderNotes();toast("تم حذف الملاحظة.");}}}
+
+function reminderDateTime(reminder){return new Date((reminder.date||"")+"T"+(reminder.time||"00:00")+":00");}
+function formatReminderDate(reminder){const d=reminderDateTime(reminder);return new Intl.DateTimeFormat("ar-EG",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}).format(d);}
+function resetReminderForm(){ $("#reminderForm").reset();$("#reminderId").value="";$("#reminderModalTitle").textContent="تذكير جديد";$("#reminderDate").value=localDate();$("#reminderTime").value="09:00";populateReminderTasks("");}
+function populateReminderTasks(selected){const select=$("#reminderTask");select.innerHTML='<option value="">بدون مهمة</option>'+data.tasks.filter(t=>!t.completed).map(t=>'<option value="'+escapeHTML(t.id)+'">'+escapeHTML(t.title)+'</option>').join("");if(selected)select.value=selected;}
+function openReminderForm(reminder){resetReminderForm();if(reminder){$("#reminderModalTitle").textContent="تعديل التذكير";$("#reminderId").value=reminder.id;$("#reminderTitle").value=reminder.title||"";$("#reminderDescription").value=reminder.description||"";$("#reminderDate").value=reminder.date||localDate();$("#reminderTime").value=reminder.time||"09:00";$("#reminderRepeat").value=reminder.repeat||"none";populateReminderTasks(reminder.taskId||"");}openModal("reminderModal");setTimeout(()=>$("#reminderTitle").focus(),60);}
+function reminderFormSubmit(e){e.preventDefault();const title=$("#reminderTitle").value.trim(),date=$("#reminderDate").value,time=$("#reminderTime").value;if(!title||!date||!time){toast("أكمل عنوان التذكير والتاريخ والوقت.");return;}const id=$("#reminderId").value,old=data.reminders.find(r=>r.id===id);const reminder={id:id||uid(),title,description:$("#reminderDescription").value.trim(),date,time,repeat:$("#reminderRepeat").value,taskId:$("#reminderTask").value,enabled:old?old.enabled!==false:true,lastNotifiedKey:old?old.lastNotifiedKey:null,createdAt:old?old.createdAt:new Date().toISOString()};if(old)data.reminders=data.reminders.map(r=>r.id===id?reminder:r);else data.reminders.unshift(reminder);if(saveData()){closeModal("reminderModal");renderReminders();toast(old?"تم تحديث التذكير.":"تم حفظ التذكير.");}}
+let activeReminderFilter="all";
+function renderReminders(){const now=Date.now();const list=data.reminders.filter(r=>activeReminderFilter==="paused"?!r.enabled:activeReminderFilter==="done"?r.enabled:activeReminderFilter==="upcoming"?r.enabled&&reminderDateTime(r).getTime()>=now:true).sort((a,b)=>reminderDateTime(a)-reminderDateTime(b));$("#remindersList").innerHTML=list.length?list.map(r=>{const task=data.tasks.find(t=>t.id===r.taskId);return '<article class="reminder-card '+(r.enabled?'':'is-paused')+'"><div class="reminder-symbol">◷</div><div class="reminder-main"><strong>'+escapeHTML(r.title)+'</strong>'+(r.description?'<p>'+escapeHTML(r.description)+'</p>':'')+'<div class="task-meta"><span>'+formatReminderDate(r)+'</span><span>'+({none:"مرة واحدة",daily:"يومياً",weekly:"أسبوعياً",monthly:"شهرياً"}[r.repeat]||"مرة واحدة")+'</span>'+(task?'<span>مهمة: '+escapeHTML(task.title)+'</span>':'')+'</div><span class="reminder-state">'+(r.enabled?'مفعّل':'متوقف')+'</span></div><div class="task-actions"><button type="button" data-reminder-toggle="'+escapeHTML(r.id)+'" aria-label="'+(r.enabled?'إيقاف':'تفعيل')+'">'+(r.enabled?'Ⅱ':'▶')+'</button><button type="button" data-reminder-edit="'+escapeHTML(r.id)+'" aria-label="تعديل">✎</button><button type="button" data-reminder-delete="'+escapeHTML(r.id)+'" aria-label="حذف">×</button></div></article>';}).join(""):'<div class="empty-inline">'+(activeReminderFilter==="paused"?"لا توجد تذكيرات متوقفة.":"لا توجد تذكيرات هنا. أضف تذكيرك الأول.")+'</div>';$("[data-reminder-filter]").forEach(b=>b.classList.toggle("active",b.dataset.reminderFilter===activeReminderFilter));updateNotificationStatus();}
+function updateNotificationStatus(){const el=$("#notificationStatus");if(!("Notification" in window)){el.textContent="المتصفح لا يدعم إشعارات الويب";return;}el.textContent=Notification.permission==="granted"?"الإشعارات مفعّلة":Notification.permission==="denied"?"تم حظر الإشعارات من إعدادات المتصفح":"الإشعارات لم تُفعّل بعد";}
+async function requestNotificationPermission(){if(!("Notification" in window)){toast("هذا المتصفح لا يدعم إشعارات الويب.");return;}try{const result=await Notification.requestPermission();updateNotificationStatus();toast(result==="granted"?"تم تفعيل إشعارات المتصفح.":result==="denied"?"تم رفض الإذن. يمكنك تغييره من إعدادات المتصفح.":"لم يتم منح إذن الإشعارات.");}catch(error){toast("تعذر طلب إذن الإشعارات من المتصفح.");}}
+function advanceReminder(reminder){const d=reminderDateTime(reminder);if(reminder.repeat==="daily")d.setDate(d.getDate()+1);else if(reminder.repeat==="weekly")d.setDate(d.getDate()+7);else if(reminder.repeat==="monthly")d.setMonth(d.getMonth()+1);else return false;reminder.date=localDate(d);return true;}
+function checkDueReminders(){const now=Date.now();let changed=false;data.reminders.forEach(r=>{if(!r.enabled)return;const due=reminderDateTime(r),key=due.toISOString();if(due.getTime()<=now&&r.lastNotifiedKey!==key){const message=r.description||"حان موعد التذكير.";toast("تذكير: "+r.title);if("Notification" in window&&Notification.permission==="granted"){try{new Notification("مهامي | MAHAMY",{body:r.title+" — "+message,tag:"mahamy-"+r.id,icon:"/favicon.ico"});}catch(error){console.warn("Notification failed",error);}}r.lastNotifiedKey=key;if(!advanceReminder(r))r.enabled=false;changed=true;}});if(changed){saveData();renderReminders();}}
+function handleReminderActions(e){const toggle=e.target.closest("[data-reminder-toggle]"),edit=e.target.closest("[data-reminder-edit]"),del=e.target.closest("[data-reminder-delete]");if(toggle){const r=data.reminders.find(x=>x.id===toggle.dataset.reminderToggle);if(r){r.enabled=!r.enabled;saveData();renderReminders();toast(r.enabled?"تم تفعيل التذكير.":"تم إيقاف التذكير.");}}if(edit){const r=data.reminders.find(x=>x.id===edit.dataset.reminderEdit);if(r)openReminderForm(r);}if(del){const id=del.dataset.reminderDelete;if(confirm("هل تريد حذف هذا التذكير؟")){data.reminders=data.reminders.filter(r=>r.id!==id);saveData();renderReminders();toast("تم حذف التذكير.");}}}
+
 function renderDashboard(){
  const today=localDate(),tasks=data.tasks,active=tasks.filter(t=>!t.completed),completed=tasks.filter(t=>t.completed),overdue=active.filter(t=>(t.dueDate||t.date)&&(t.dueDate||t.date)<today),todayTasks=tasks.filter(t=>!t.completed&&(t.date===today||t.dueDate===today));
  const dayAll=tasks.filter(t=>t.date===today||t.dueDate===today),done=dayAll.filter(t=>t.completed).length,pct=dayAll.length?Math.round(done/dayAll.length*100):0;
@@ -191,12 +208,13 @@ function bindEvents(){
  $("#addNoteBtn").addEventListener("click",()=>openNoteForm());$("#noteForm").addEventListener("submit",noteFormSubmit);
  $("#notesList").addEventListener("click",handleNoteAction);$("#noteSearch").addEventListener("input",renderNotes);
  $("#exportDataBtn").addEventListener("click",exportData);
+ $("#addReminderBtn").addEventListener("click",()=>openReminderForm());$("#reminderForm").addEventListener("submit",reminderFormSubmit);$("#remindersList").addEventListener("click",handleReminderActions);$("#enableNotificationsBtn").addEventListener("click",requestNotificationPermission);$("#reminderFilters").addEventListener("click",e=>{const b=e.target.closest("[data-reminder-filter]");if(!b)return;activeReminderFilter=b.dataset.reminderFilter;renderReminders();});
  window.addEventListener("storage",e=>{if(e.key===STORAGE_KEY){loadData();renderAll();}});
 }
 function init(){
  loadData();cleanupCompleted();updateClock();setInterval(updateClock,1000);
  $("#dailyQuote").textContent=quotes[Math.floor(Math.random()*quotes.length)];
- bindEvents();renderAll();
+ bindEvents();renderAll();renderReminders();checkDueReminders();setInterval(checkDueReminders,15000);
  setInterval(()=>{const before=data.tasks.length;cleanupCompleted();if(data.tasks.length!==before)renderAll();},60000);
 }
 document.addEventListener("DOMContentLoaded",init);
