@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://mahamy-hrm.vercel.app/sitemap.xml
