@@ -7,7 +7,7 @@ const DEFAULT_CATEGORIES = ["الدراسة","الواجبات","المراجع�
 const PRIORITIES = {urgent:"عاجلة جداً",high:"عالية",medium:"متوسطة",low:"منخفضة"};
 const PRIORITY_ORDER = {urgent:0,high:1,medium:2,low:3};
 const quotes = ["الإنجاز يبدأ بقرار صغير.","لا تحتاج إلى إنجاز كل شيء اليوم؛ ابدأ بالأهم.","الاستمرارية تصنع ما لا تصنعه السرعة.","نظّم وقتك، واترك مساحة للأشياء الجميلة.","كل خطوة واضحة تقرّبك من هدفك."];
-let data = {tasks:[],notes:[],reminders:[],categories:[...DEFAULT_CATEGORIES]};
+let data = {tasks:[],notes:[],reminders:[],subjects:[],lectures:[],fridayReview:{},categories:[...DEFAULT_CATEGORIES]};
 let activeFilter = "all";
 let toastTimer;
 
@@ -32,6 +32,9 @@ function loadData() {
       data.tasks = Array.isArray(parsed.tasks) ? parsed.tasks : [];
       data.notes = Array.isArray(parsed.notes) ? parsed.notes : [];
       data.reminders = Array.isArray(parsed.reminders) ? parsed.reminders : [];
+      data.subjects = Array.isArray(parsed.subjects) ? parsed.subjects : [];
+      data.lectures = Array.isArray(parsed.lectures) ? parsed.lectures : [];
+      data.fridayReview = parsed.fridayReview && typeof parsed.fridayReview === "object" ? parsed.fridayReview : {};
       data.categories = Array.isArray(parsed.categories) && parsed.categories.length ? parsed.categories : [...DEFAULT_CATEGORIES];
     }
   } catch (error) { console.error("LocalStorage read failed",error); toast("تعذر قراءة بعض البيانات المحفوظة."); }
@@ -56,6 +59,7 @@ function showPage(name) {
   if(name==="tasks") renderTasks();
   if(name==="notes") renderNotes();
   if(name==="reminders") renderReminders();
+  if(name==="schedule") renderSchedule();
 }
 function bindNavigation() {
   $$("[data-page]").forEach(el=>el.addEventListener("click",e=>{e.preventDefault();showPage(el.dataset.page);}));
@@ -188,6 +192,23 @@ function advanceReminder(reminder){const d=reminderDateTime(reminder);if(reminde
 function checkDueReminders(){const now=Date.now();let changed=false;data.reminders.forEach(r=>{if(!r.enabled)return;const due=reminderDateTime(r),key=due.toISOString();if(due.getTime()<=now&&r.lastNotifiedKey!==key){const message=r.description||"حان موعد التذكير.";toast("تذكير: "+r.title);if("Notification" in window&&Notification.permission==="granted"){try{new Notification("مهامي | MAHAMY",{body:r.title+" — "+message,tag:"mahamy-"+r.id,icon:"/favicon.ico"});}catch(error){console.warn("Notification failed",error);}}r.lastNotifiedKey=key;if(!advanceReminder(r))r.enabled=false;changed=true;}});if(changed){saveData();renderReminders();}}
 function handleReminderActions(e){const toggle=e.target.closest("[data-reminder-toggle]"),edit=e.target.closest("[data-reminder-edit]"),del=e.target.closest("[data-reminder-delete]");if(toggle){const r=data.reminders.find(x=>x.id===toggle.dataset.reminderToggle);if(r){r.enabled=!r.enabled;saveData();renderReminders();toast(r.enabled?"تم تفعيل التذكير.":"تم إيقاف التذكير.");}}if(edit){const r=data.reminders.find(x=>x.id===edit.dataset.reminderEdit);if(r)openReminderForm(r);}if(del){const id=del.dataset.reminderDelete;if(confirm("هل تريد حذف هذا التذكير؟")){data.reminders=data.reminders.filter(r=>r.id!==id);saveData();renderReminders();toast("تم حذف التذكير.");}}}
 
+
+const WEEKDAYS=["الأحد","الإثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+let scheduleWeekOffset=0;
+function weekStart(offset=0){const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()-d.getDay()+offset*7);return d;}
+function dayKey(d){return localDate(d);}
+function shiftDate(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x;}
+function fillSubjectSelect(selected){const el=$("#lectureSubject");el.innerHTML=data.subjects.map(s=>'<option value="'+escapeHTML(s.id)+'">'+escapeHTML(s.name)+'</option>').join("");if(selected)el.value=selected;}
+function openSubjectForm(subject){$("#subjectForm").reset();$("#subjectId").value="";$("#subjectModalTitle").textContent=subject?"تعديل المادة":"إضافة مادة";if(subject){$("#subjectId").value=subject.id;$("#subjectName").value=subject.name;$("#subjectTeacher").value=subject.teacher||"";$("#subjectColor").value=subject.color||"purple";$("#subjectNotes").value=subject.notes||"";}openModal("subjectModal");}
+function subjectSubmit(e){e.preventDefault();const name=$("#subjectName").value.trim();if(!name){toast("اكتب اسم المادة.");return;}const id=$("#subjectId").value,old=data.subjects.find(s=>s.id===id);if(data.subjects.some(s=>s.name.toLocaleLowerCase("ar")===name.toLocaleLowerCase("ar")&&s.id!==id)){toast("هذه المادة موجودة بالفعل.");return;}const subject={id:id||uid(),name,teacher:$("#subjectTeacher").value.trim(),color:$("#subjectColor").value,notes:$("#subjectNotes").value.trim(),createdAt:old?old.createdAt:new Date().toISOString()};data.subjects=old?data.subjects.map(s=>s.id===id?subject:s):[...data.subjects,subject];if(saveData()){closeModal("subjectModal");renderSchedule();toast(old?"تم تحديث المادة.":"تمت إضافة المادة.");}}
+function openLectureForm(lecture){if(!data.subjects.length){toast("أضف مادة دراسية أولاً.");openSubjectForm();return;}$("#lectureForm").reset();$("#lectureId").value="";$("#lectureModalTitle").textContent=lecture?"تعديل المحاضرة":"إضافة محاضرة";fillSubjectSelect(lecture?lecture.subjectId:data.subjects[0].id);if(lecture){$("#lectureId").value=lecture.id;$("#lectureTitle").value=lecture.title||"";$("#lectureDay").value=String(lecture.day);$("#lectureTime").value=lecture.time||"";$("#lecturePeriod").value=lecture.period||"";$("#lectureNotes").value=lecture.notes||"";}else{const d=weekStart(scheduleWeekOffset);$("#lectureDay").value=String((new Date()).getDay());}openModal("lectureModal");}
+function lectureSubmit(e){e.preventDefault();const subjectId=$("#lectureSubject").value;if(!data.subjects.some(s=>s.id===subjectId)){toast("اختر مادة صحيحة.");return;}const id=$("#lectureId").value,old=data.lectures.find(l=>l.id===id);const lecture={id:id||uid(),subjectId,title:$("#lectureTitle").value.trim(),day:Number($("#lectureDay").value),time:$("#lectureTime").value,period:$("#lecturePeriod").value,notes:$("#lectureNotes").value.trim(),completedDates:old?(old.completedDates||[]):[]};data.lectures=old?data.lectures.map(l=>l.id===id?lecture:l):[...data.lectures,lecture];if(saveData()){closeModal("lectureModal");renderSchedule();toast(old?"تم تحديث المحاضرة.":"تمت إضافة المحاضرة الأسبوعية.");}}
+function renderSubjects(){const el=$("#subjectsList");el.innerHTML=data.subjects.length?data.subjects.map(s=>'<article class="subject-card subject-'+escapeHTML(s.color||"purple")+'"><div class="subject-dot"></div><div class="subject-info"><strong>'+escapeHTML(s.name)+'</strong><small>'+escapeHTML(s.teacher||"لم يُحدد مدرس")+'</small></div><div class="subject-actions"><button data-subject-edit="'+escapeHTML(s.id)+'" aria-label="تعديل المادة">✎</button><button data-subject-delete="'+escapeHTML(s.id)+'" aria-label="حذف المادة">×</button></div></article>').join(""):'<div class="empty-inline">لم تضف مواداً بعد. ابدأ بإضافة أول مادة.</div>';}
+function renderSchedule(){renderSubjects();const start=weekStart(scheduleWeekOffset),end=shiftDate(start,6);$("#scheduleWeekLabel").textContent="من "+formatDate(dayKey(start))+" إلى "+formatDate(dayKey(end));const days=[];for(let i=0;i<7;i++){const d=shiftDate(start,i),key=dayKey(d),lectures=data.lectures.filter(l=>Number(l.day)===d.getDay()).sort((a,b)=>(a.time||"99:99").localeCompare(b.time||"99:99"));const cards=lectures.map(l=>{const subject=data.subjects.find(s=>s.id===l.subjectId);if(!subject)return "";const done=(l.completedDates||[]).includes(key);return '<article class="lecture-card '+(done?'lecture-done':'')+'"><div class="lecture-color subject-'+escapeHTML(subject.color||"purple")+'"></div><div class="lecture-content"><strong>'+escapeHTML(l.title||subject.name)+'</strong><span>'+escapeHTML(subject.name)+(subject.teacher?' · '+escapeHTML(subject.teacher):"")+'</span><small>'+(l.time?escapeHTML(l.time):escapeHTML(l.period||"بدون وقت"))+'</small>'+(l.notes?'<p>'+escapeHTML(l.notes)+'</p>':'')+'</div><div class="lecture-actions"><button data-lecture-done="'+escapeHTML(l.id)+'" data-date="'+key+'" title="تحديد كمكتملة">'+(done?'↶':'✓')+'</button><button data-lecture-edit="'+escapeHTML(l.id)+'" title="تعديل">✎</button><button data-lecture-delete="'+escapeHTML(l.id)+'" title="حذف">×</button></div></article>';}).join("");days.push('<section class="weekday-column '+(d.getDay()===5?'friday-column':'')+'"><header><strong>'+WEEKDAYS[d.getDay()]+'</strong><span>'+new Intl.DateTimeFormat("ar-EG",{day:"numeric",month:"short"}).format(d)+'</span></header>'+(cards||'<div class="day-empty">لا توجد محاضرات</div>')+'</section>');}$("#weeklySchedule").innerHTML=days.join("");loadFridayReview();}
+function loadFridayReview(){const r=data.fridayReview||{};$("#fridayTopics").value=r.topics||"";$("#fridayStudy").checked=!!r.study;$("#fridayExercises").checked=!!r.exercises;$("#fridayHomework").checked=!!r.homework;$("#fridaySubjects").value=r.subjects||"";$("#fridayNotes").value=r.notes||"";}
+function saveFridayReview(e){e.preventDefault();data.fridayReview={topics:$("#fridayTopics").value.trim(),study:$("#fridayStudy").checked,exercises:$("#fridayExercises").checked,homework:$("#fridayHomework").checked,subjects:$("#fridaySubjects").value.trim(),notes:$("#fridayNotes").value.trim(),updatedAt:new Date().toISOString()};if(saveData())toast("تم حفظ خطة مراجعة الجمعة.");}
+function handleScheduleActions(e){const se=e.target.closest("[data-subject-edit]"),sd=e.target.closest("[data-subject-delete]"),le=e.target.closest("[data-lecture-edit]"),ld=e.target.closest("[data-lecture-delete]"),done=e.target.closest("[data-lecture-done]");if(se){const s=data.subjects.find(x=>x.id===se.dataset.subjectEdit);if(s)openSubjectForm(s);}if(sd){const id=sd.dataset.subjectDelete;if(confirm("حذف المادة؟ سيتم حذف محاضراتها أيضاً.")){data.subjects=data.subjects.filter(s=>s.id!==id);data.lectures=data.lectures.filter(l=>l.subjectId!==id);saveData();renderSchedule();toast("تم حذف المادة ومحاضراتها.");}}if(le){const l=data.lectures.find(x=>x.id===le.dataset.lectureEdit);if(l)openLectureForm(l);}if(ld){const id=ld.dataset.lectureDelete;if(confirm("حذف هذه المحاضرة من جدولك الأسبوعي؟")){data.lectures=data.lectures.filter(l=>l.id!==id);saveData();renderSchedule();toast("تم حذف المحاضرة.");}}if(done){const l=data.lectures.find(x=>x.id===done.dataset.lectureDone);if(l){const date=done.dataset.date;l.completedDates=l.completedDates||[];l.completedDates=l.completedDates.includes(date)?l.completedDates.filter(x=>x!==date):[...l.completedDates,date];saveData();renderSchedule();toast(l.completedDates.includes(date)?"تم تسجيل المحاضرة كمكتملة.":"تمت إعادة فتح المحاضرة.");}}}
+
 function renderDashboard(){
  const today=localDate(),tasks=data.tasks,active=tasks.filter(t=>!t.completed),completed=tasks.filter(t=>t.completed),overdue=active.filter(t=>(t.dueDate||t.date)&&(t.dueDate||t.date)<today),todayTasks=tasks.filter(t=>!t.completed&&(t.date===today||t.dueDate===today));
  const dayAll=tasks.filter(t=>t.date===today||t.dueDate===today),done=dayAll.filter(t=>t.completed).length,pct=dayAll.length?Math.round(done/dayAll.length*100):0;
@@ -208,13 +229,14 @@ function bindEvents(){
  $("#addNoteBtn").addEventListener("click",()=>openNoteForm());$("#noteForm").addEventListener("submit",noteFormSubmit);
  $("#notesList").addEventListener("click",handleNoteAction);$("#noteSearch").addEventListener("input",renderNotes);
  $("#exportDataBtn").addEventListener("click",exportData);
+ $("#addSubjectBtn").addEventListener("click",()=>openSubjectForm());$("#subjectForm").addEventListener("submit",subjectSubmit);$("#addLectureBtn").addEventListener("click",()=>openLectureForm());$("#lectureForm").addEventListener("submit",lectureSubmit);$("#subjectsList").addEventListener("click",handleScheduleActions);$("#weeklySchedule").addEventListener("click",handleScheduleActions);$("#fridayReviewForm").addEventListener("submit",saveFridayReview);$("#schedulePrevWeek").addEventListener("click",()=>{scheduleWeekOffset--;renderSchedule();});$("#scheduleNextWeek").addEventListener("click",()=>{scheduleWeekOffset++;renderSchedule();});$("#scheduleThisWeek").addEventListener("click",()=>{scheduleWeekOffset=0;renderSchedule();});
  $("#addReminderBtn").addEventListener("click",()=>openReminderForm());$("#reminderForm").addEventListener("submit",reminderFormSubmit);$("#remindersList").addEventListener("click",handleReminderActions);$("#enableNotificationsBtn").addEventListener("click",requestNotificationPermission);$("#reminderFilters").addEventListener("click",e=>{const b=e.target.closest("[data-reminder-filter]");if(!b)return;activeReminderFilter=b.dataset.reminderFilter;renderReminders();});
  window.addEventListener("storage",e=>{if(e.key===STORAGE_KEY){loadData();renderAll();}});
 }
 function init(){
  loadData();cleanupCompleted();updateClock();setInterval(updateClock,1000);
  $("#dailyQuote").textContent=quotes[Math.floor(Math.random()*quotes.length)];
- bindEvents();renderAll();renderReminders();checkDueReminders();setInterval(checkDueReminders,15000);
+ bindEvents();renderAll();renderReminders();renderSchedule();checkDueReminders();setInterval(checkDueReminders,15000);
  setInterval(()=>{const before=data.tasks.length;cleanupCompleted();if(data.tasks.length!==before)renderAll();},60000);
 }
 document.addEventListener("DOMContentLoaded",init);
