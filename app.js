@@ -112,6 +112,7 @@ function taskFormSubmit(e) {
 function taskMatches(task,filter,today,tomorrow) {
   const due=task.dueDate||task.date;
   if(filter==="completed")return task.completed;
+  if(filter==="all")return true;
   if(task.completed)return false;
   if(filter==="today")return due===today;
   if(filter==="tomorrow")return due===tomorrow;
@@ -155,7 +156,7 @@ function handleTaskAction(e) {
   const control=e.target.closest("[data-action]");if(!control)return;
   const task=data.tasks.find(t=>t.id===control.dataset.id);if(!task)return;
   const action=control.dataset.action;
-  if(action==="toggle"){task.completed=control.checked;task.completedAt=control.checked?new Date().toISOString():null;saveData();renderAll();toast(control.checked?"تم تسجيل اكتمال المهمة.":"تمت إعادة فتح المهمة.");}
+  if(action==="toggle"){if(e.type!=="change")return;task.completed=control.checked;task.completedAt=control.checked?new Date().toISOString():null;saveData();renderAll();toast(control.checked?"تم تسجيل اكتمال المهمة.":"تمت إعادة فتح المهمة.");}
   if(action==="edit")openTaskForm(task);
   if(action==="delete"&&confirm("هل تريد حذف هذه المهمة نهائياً؟")){data.tasks=data.tasks.filter(t=>t.id!==task.id);saveData();renderAll();toast("تم حذف المهمة.");}
 }
