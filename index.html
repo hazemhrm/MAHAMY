@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#8500E8">
+  <meta name="description" content="مهامي MAHAMY — مساحة شخصية لتنظيم المهام والدراسة والوقت.">
+  <title>مهامي | MAHAMY</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="#" aria-label="مهامي الرئيسية" data-page="dashboard">
+        <span class="brand-mark">م</span>
+        <span><strong>مهامي</strong><small>MAHAMY</small></span>
+      </a>
+      <div class="sidebar-label">مساحة العمل</div>
+      <nav class="side-nav" aria-label="التنقل الرئيسي">
+        <button class="nav-item active" data-page="dashboard"><span class="nav-icon">⌂</span>الرئيسية</button>
+        <button class="nav-item" data-page="tasks"><span class="nav-icon">✓</span>مهامي</button>
+        <button class="nav-item" data-page="reminders"><span class="nav-icon">◷</span>التذكيرات</button>
+        <button class="nav-item" data-page="schedule"><span class="nav-icon">▦</span>الجدول الدراسي</button>
+        <button class="nav-item" data-page="calendar"><span class="nav-icon">▣</span>التقويم</button>
+        <button class="nav-item" data-page="notes"><span class="nav-icon">▤</span>الملاحظات</button>
+        <button class="nav-item" data-page="analytics"><span class="nav-icon">▥</span>الإحصائيات</button>
+      </nav>
+      <div class="sidebar-bottom">
+        <button class="nav-item" data-page="settings"><span class="nav-icon">⚙</span>الإعدادات</button>
+        <div class="sidebar-tip"><span class="tip-spark">✦</span><p>خطوة صغيرة اليوم تصنع فرقاً كبيراً غداً.</p></div>
+      </div>
+    </aside>
+
+    <main class="main-area">
+      <header class="topbar">
+        <div class="mobile-brand"><span class="brand-mark">م</span><strong>مهامي</strong></div>
+        <div class="topbar-date" id="topbarDate">...</div>
+        <div class="topbar-actions"><span class="status-dot"></span><span>مساحتك الشخصية</span></div>
+      </header>
+
+      <section class="page active" id="page-dashboard">
+        <div class="welcome-row">
+          <div><p class="eyebrow">مساحة يومك تبدأ من هنا</p><h1 id="greeting">أهلاً بك 👋</h1><p class="muted">رتّب أفكارك، وحدد أولوياتك، وابدأ بخطوة واضحة.</p></div>
+          <div class="clock-card"><span>الوقت الآن</span><strong id="liveClock">--:--</strong><small id="fullDate">...</small></div>
+        </div>
+
+        <div class="hero-card">
+          <div class="hero-copy"><span class="hero-kicker">يوم جديد · فرصة جديدة</span><h2>أنجز الأهم، واترك مساحة لنفسك.</h2><p>كل مهمة تنجزها تقرّبك من أهدافك.</p><button class="primary-btn" data-page="tasks">ابدأ تنظيم مهامك <span>←</span></button></div>
+          <div class="hero-art" aria-hidden="true"><div class="art-orbit orbit-one"></div><div class="art-orbit orbit-two"></div><div class="art-check">✓</div><span class="art-star star-one">✦</span><span class="art-star star-two">✧</span></div>
+        </div>
+
+        <div class="section-heading"><div><h2>نظرة سريعة</h2><p>ملخص إنجازاتك ومهامك</p></div><button class="text-btn" data-page="analytics">عرض الإحصائيات ←</button></div>
+        <div class="stats-grid">
+          <article class="stat-card"><span class="stat-icon purple">▤</span><span class="stat-label">إجمالي المهام</span><strong id="totalTasks">0</strong><small>كل ما تخطط لإنجازه</small></article>
+          <article class="stat-card"><span class="stat-icon green">✓</span><span class="stat-label">مكتملة</span><strong id="completedTasks">0</strong><small>إنجازاتك المسجلة</small></article>
+          <article class="stat-card"><span class="stat-icon orange">◷</span><span class="stat-label">متبقية</span><strong id="remainingTasks">0</strong><small>بانتظار إنجازك</small></article>
+          <article class="stat-card"><span class="stat-icon rose">!</span><span class="stat-label">متأخرة</span><strong id="overdueTasks">0</strong><small>تحتاج إلى ترتيب</small></article>
+        </div>
+
+        <div class="dashboard-grid">
+          <article class="panel progress-panel"><div class="panel-heading"><div><h3>إنجاز اليوم</h3><p>تابع تقدمك خطوة بخطوة</p></div><span class="progress-percent" id="progressPercent">0%</span></div><div class="progress-track"><span id="progressBar"></span></div><div class="progress-foot"><span id="progressText">لم تبدأ مهام اليوم بعد</span><span id="progressCount">0 / 0</span></div></article>
+          <article class="panel quote-panel"><span class="quote-mark">“</span><p id="dailyQuote">الإنجاز يبدأ بقرار صغير.</p><small>رسالة اليوم</small></article>
+        </div>
+
+        <div class="section-heading"><div><h2>مساحتك المنظمة</h2><p>انتقل مباشرة إلى القسم الذي تحتاجه</p></div></div>
+        <div class="quick-grid">
+          <button class="quick-card" data-page="tasks"><span class="quick-icon">✓</span><strong>المهام</strong><small>خطط وأنجز أولوياتك</small><b>←</b></button>
+          <button class="quick-card" data-page="schedule"><span class="quick-icon">▦</span><strong>الجدول الدراسي</strong><small>نظّم موادك ومحاضراتك</small><b>←</b></button>
+          <button class="quick-card" data-page="reminders"><span class="quick-icon">◷</span><strong>التذكيرات</strong><small>لا تفوّت موعداً مهماً</small><b>←</b></button>
+          <button class="quick-card" data-page="notes"><span class="quick-icon">▤</span><strong>الملاحظات</strong><small>اجمع أفكارك في مكان واحد</small><b>←</b></button>
+        </div>
+      </section>
+
+      <section class="page" id="page-tasks"><div class="page-title"><p class="eyebrow">خطط بوضوح</p><h1>مهامي</h1><p class="muted">كل ما تريد إنجازه، في مكان واحد.</p></div><div class="empty-state"><span>✓</span><h2>قائمة مهامك جاهزة</h2><p>سيتم بناء إضافة المهام وإدارتها وحفظها في المرحلة التالية.</p></div></section>
+      <section class="page" id="page-reminders"><div class="page-title"><p class="eyebrow">كن مستعداً</p><h1>التذكيرات</h1><p class="muted">مواعيدك المهمة وتنبيهاتك في مكان واحد.</p></div><div class="empty-state"><span>◷</span><h2>مساحة التذكيرات</h2><p>سيتم إعداد التذكيرات والإشعارات في المرحلة الثالثة.</p></div></section>
+      <section class="page" id="page-schedule"><div class="page-title"><p class="eyebrow">تعلم بتنظيم</p><h1>الجدول الدراسي</h1><p class="muted">رتّب المواد والمحاضرات وأيام المراجعة.</p></div><div class="empty-state"><span>▦</span><h2>جدولك الدراسي بانتظارك</h2><p>سيتم تنفيذ المواد والمحاضرات ومراجعة الجمعة في المرحلة الرابعة.</p></div></section>
+      <section class="page" id="page-calendar"><div class="page-title"><p class="eyebrow">رؤية أشمل لوقتك</p><h1>التقويم</h1><p class="muted">نظرة شهرية وأسبوعية على التزاماتك.</p></div><div class="empty-state"><span>▣</span><h2>تقويمك الشخصي</h2><p>سيتم ربط التقويم بالمهام والتذكيرات والجدول في المرحلة الخامسة.</p></div></section>
+      <section class="page" id="page-notes"><div class="page-title"><p class="eyebrow">أفكارك محفوظة</p><h1>الملاحظات</h1><p class="muted">مساحة بسيطة لكل فكرة تستحق الاحتفاظ بها.</p></div><div class="empty-state"><span>▤</span><h2>دفتر ملاحظاتك</h2><p>سيتم تنفيذ إنشاء الملاحظات وتعديلها وحفظها في المرحلة الثانية.</p></div></section>
+      <section class="page" id="page-analytics"><div class="page-title"><p class="eyebrow">تقدمك يستحق المتابعة</p><h1>الإحصائيات</h1><p class="muted">تابع إنجازاتك واكتشف تطورك مع الوقت.</p></div><div class="empty-state"><span>▥</span><h2>رحلة إنجازك ستظهر هنا</h2><p>ستُبنى الإحصائيات بعد اكتمال نظام المهام والجدول.</p></div></section>
+      <section class="page" id="page-settings"><div class="page-title"><p class="eyebrow">تحكم في تجربتك</p><h1>الإعدادات</h1><p class="muted">خصص مهامي بالطريقة التي تناسبك.</p></div><div class="empty-state"><span>⚙</span><h2>إعدادات التطبيق</h2><p>ستُضاف خيارات التخصيص والنسخ الاحتياطي في المرحلة الخامسة والسادسة.</p></div></section>
+
+      <footer class="app-footer">Powered by <strong>HRM™</strong></footer>
+    </main>
+  </div>
+  <nav class="bottom-nav" aria-label="التنقل على الهاتف">
+    <button class="active" data-page="dashboard"><span>⌂</span><small>الرئيسية</small></button>
+    <button data-page="tasks"><span>✓</span><small>مهامي</small></button>
+    <button data-page="schedule"><span>▦</span><small>الجدول</small></button>
+    <button data-page="calendar"><span>▣</span><small>التقويم</small></button>
+    <button data-page="settings"><span>⚙</span><small>الإعدادات</small></button>
+  </nav>
+  <script src="app.js"></script>
+</body>
+</html>
